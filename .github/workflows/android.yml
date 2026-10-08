@@ -1,0 +1,39 @@
+name: Build EJDEN Android
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Compile APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Configurer Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Compiler l'application
+        run: ./gradlew :androidApp:assembleDebug --no-daemon
+
+      - name: Publier l'APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: EJDEN-debug-APK
+          path: androidApp/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
