@@ -28,7 +28,14 @@ jobs:
       - name: Configurer Android SDK
         uses: android-actions/setup-android@v4
         with:
-          packages: 'platform-tools platforms;android-37 build-tools;37.0.0'
+          packages: 'platform-tools platforms;android-37.0 build-tools;37.0.0'
+
+      - name: Adapter le chemin du SDK pour Gradle
+        run: |
+          test -d "$ANDROID_HOME/platforms/android-37.0"
+          if [ ! -e "$ANDROID_HOME/platforms/android-37" ]; then
+            ln -s "$ANDROID_HOME/platforms/android-37.0" "$ANDROID_HOME/platforms/android-37"
+          fi
 
       - name: Compiler l'application
         run: ./gradlew :androidApp:assembleDebug --no-daemon
