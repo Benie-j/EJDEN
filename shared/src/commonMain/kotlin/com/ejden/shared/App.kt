@@ -586,17 +586,17 @@ private fun KpiCard(
 ) {
     Column(
         modifier = modifier
-            .defaultMinSize(minHeight = 112.dp)
+            .defaultMinSize(minHeight = 126.dp)
             .background(SurfaceColor, RoundedCornerShape(13.dp))
             .border(1.dp, BorderColor, RoundedCornerShape(13.dp))
-            .padding(horizontal = 12.dp, vertical = 11.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = 13.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(7.dp)
     ) {
         Text(
             data.title,
-            color = SecondaryText,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold,
+            color = MainText,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Normal,
             minLines = 2,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
@@ -604,8 +604,8 @@ private fun KpiCard(
         Text(
             data.value,
             color = MainText,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
+            fontSize = 26.sp,
+            fontWeight = FontWeight.Normal,
             maxLines = 1
         )
         Row(
@@ -615,15 +615,15 @@ private fun KpiCard(
         ) {
             Text(
                 data.unit,
-                color = LightText,
-                fontSize = 9.sp,
+                color = SecondaryText,
+                fontSize = 12.sp,
                 maxLines = 1,
                 modifier = Modifier.weight(1f)
             )
             Text(
                 data.period,
-                color = LightText,
-                fontSize = 8.sp,
+                color = SecondaryText,
+                fontSize = 11.sp,
                 maxLines = 1
             )
         }
@@ -656,16 +656,16 @@ private fun Panel(
                 Text(
                     eyebrow,
                     color = Primary,
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
                     letterSpacing = 1.1.sp
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     title,
                     color = MainText,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Medium
                 )
             }
 
@@ -688,8 +688,8 @@ private fun SalesPanel(modifier: Modifier = Modifier) {
         title = "Évolution des ventes",
         modifier = modifier
     ) {
-        Text("Chiffre d'affaires", color = SecondaryText, fontSize = 10.sp)
-        Text("0 FCFA", color = MainText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text("Chiffre d'affaires", color = SecondaryText, fontSize = 12.sp)
+        Text("0 FCFA", color = MainText, fontSize = 24.sp, fontWeight = FontWeight.Normal)
 
         Column(
             modifier = Modifier
@@ -919,8 +919,8 @@ private fun MiniPanel(
             letterSpacing = 1.1.sp
         )
         Text(title, color = MainText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-        Text(value, color = MainText, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-        Text(description, color = SecondaryText, fontSize = 10.sp)
+        Text(value, color = MainText, fontSize = 24.sp, fontWeight = FontWeight.Normal)
+        Text(description, color = SecondaryText, fontSize = 12.sp)
     }
 }
 
