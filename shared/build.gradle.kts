@@ -8,7 +8,7 @@ plugins {
 kotlin {
     android {
         namespace = "com.ejden.shared"
-        compileSdk = 36
+        compileSdk = 37
         minSdk = 26
     }
 
