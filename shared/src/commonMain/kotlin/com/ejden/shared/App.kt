@@ -185,35 +185,6 @@ private fun WelcomeScreen(onContinue: () -> Unit) {
             lineHeight = 22.sp
         )
 
-        Spacer(Modifier.height(24.dp))
-
-        listOf("01" to "Produits", "02" to "Ventes", "03" to "Clients")
-            .forEach { (number, label) ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 7.dp)
-                        .background(SurfaceColor, RoundedCornerShape(13.dp))
-                        .border(1.dp, BorderColor, RoundedCornerShape(13.dp))
-                        .padding(horizontal = 16.dp, vertical = 15.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = number,
-                        color = Primary,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                    Spacer(Modifier.width(14.dp))
-                    Text(
-                        text = label,
-                        color = MainText,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-
         Spacer(Modifier.height(22.dp))
 
 
