@@ -1,5 +1,12 @@
 package com.ejden.shared
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,6 +25,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -31,21 +39,295 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-private val Primary = Color(0xFF176B87)
-private val PrimaryDark = Color(0xFF12566C)
-private val PrimarySoft = Color(0xFFEAF4F7)
-private val Background = Color(0xFFF5F7F8)
-private val SurfaceColor = Color(0xFFFFFFFF)
-private val MainText = Color(0xFF172126)
-private val SecondaryText = Color(0xFF68777D)
-private val LightText = Color(0xFF8D9A9F)
-private val BorderColor = Color(0xFFE2E8EA)
+private var useDarkPalette by mutableStateOf(false)
+
+private val Primary: Color get() = Color(0xFF176B87)
+private val PrimaryDark: Color get() = Color(0xFF12566C)
+private val PrimarySoft: Color
+    get() = if (useDarkPalette) Color(0xFF173943) else Color(0xFFEAF4F7)
+private val Background: Color
+    get() = if (useDarkPalette) Color(0xFF0F181C) else Color(0xFFF6F9FA)
+private val SurfaceColor: Color
+    get() = if (useDarkPalette) Color(0xFF162126) else Color(0xFFFFFFFF)
+private val MainText: Color
+    get() = if (useDarkPalette) Color(0xFFF1F6F8) else Color(0xFF172126)
+private val SecondaryText: Color
+    get() = if (useDarkPalette) Color(0xFF9BAAB0) else Color(0xFF68777D)
+private val LightText: Color
+    get() = if (useDarkPalette) Color(0xFF87989F) else Color(0xFF8D9A9F)
+private val BorderColor: Color
+    get() = if (useDarkPalette) Color(0xFF26373D) else Color(0xFFE3EAED)
 private val Success = Color(0xFF168A5B)
 private val Warning = Color(0xFFD98A16)
 private val Error = Color(0xFFD64545)
 
+
 @Composable
-fun EjdenApp() {
+fun EjdenApp(
+    initialTheme: String = "system",
+    onThemeChanged: (String) -> Unit = {}
+) {
+    var themeMode by remember { mutableStateOf(initialTheme) }
+    var screen by remember { mutableStateOf("splash") }
+    val systemDark = isSystemInDarkTheme()
+    val dark = when (themeMode) {
+        "dark" -> true
+        "light" -> false
+        else -> systemDark
+    }
+
+    SideEffect {
+        useDarkPalette = dark
+    }
+
+    LaunchedEffect(Unit) {
+        delay(5000)
+        screen = "welcome"
+    }
+
+    MaterialTheme {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = Background
+        ) {
+            Crossfade(targetState = screen, animationSpec = tween(450)) { current ->
+                when (current) {
+                    "splash" -> SplashScreen()
+                    "welcome" -> WelcomeScreen(
+                        themeMode = themeMode,
+                        onThemeSelected = { selected ->
+                            themeMode = selected
+                            onThemeChanged(selected)
+                        },
+                        onContinue = { screen = "dashboard" }
+                    )
+                    else -> DashboardScreen()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SplashScreen() {
+    val transition = rememberInfiniteTransition()
+    val scale by transition.animateFloat(
+        initialValue = 0.96f,
+        targetValue = 1.04f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Background),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            EjdenLogo(
+                modifier = Modifier
+                    .size(118.dp)
+                    .then(Modifier),
+                color = Primary
+            )
+            Text(
+                text = "EJDEN",
+                color = Primary,
+                fontSize = 27.sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 3.sp,
+                modifier = Modifier
+            )
+            Text(
+                text = "Gérez. Suivez. Avancez.",
+                color = SecondaryText,
+                fontSize = 13.sp
+            )
+        }
+
+        Text(
+            text = "by Benie Groupe",
+            color = SecondaryText,
+            fontSize = 11.sp,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 14.dp)
+        )
+    }
+}
+
+@Composable
+private fun WelcomeScreen(
+    themeMode: String,
+    onThemeSelected: (String) -> Unit,
+    onContinue: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Background)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 26.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        EjdenLogo(
+            modifier = Modifier.size(92.dp),
+            color = Primary
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        Text(
+            text = "EJDEN",
+            color = Primary,
+            fontSize = 30.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = 2.sp
+        )
+
+        Spacer(Modifier.height(28.dp))
+
+        Text(
+            text = "VOTRE ESPACE DE GESTION",
+            color = Primary,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = 1.6.sp
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        Text(
+            text = "Votre espace EJDEN est prêt.",
+            color = MainText,
+            fontSize = 27.sp,
+            fontWeight = FontWeight.Bold,
+            lineHeight = 34.sp
+        )
+
+        Spacer(Modifier.height(10.dp))
+
+        Text(
+            text = "Commencez à enregistrer vos produits, vos ventes et vos clients.",
+            color = SecondaryText,
+            fontSize = 14.sp,
+            lineHeight = 22.sp
+        )
+
+        Spacer(Modifier.height(24.dp))
+
+        listOf("01" to "Produits", "02" to "Ventes", "03" to "Clients")
+            .forEach { (number, label) ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 7.dp)
+                        .background(SurfaceColor, RoundedCornerShape(13.dp))
+                        .border(1.dp, BorderColor, RoundedCornerShape(13.dp))
+                        .padding(horizontal = 16.dp, vertical = 15.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = number,
+                        color = Primary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Spacer(Modifier.width(14.dp))
+                    Text(
+                        text = label,
+                        color = MainText,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+        Spacer(Modifier.height(22.dp))
+
+        Text(
+            text = "APPARENCE",
+            color = SecondaryText,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.2.sp
+        )
+
+        Spacer(Modifier.height(10.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(7.dp)
+        ) {
+            listOf(
+                "system" to "Automatique",
+                "light" to "Clair",
+                "dark" to "Sombre"
+            ).forEach { (value, label) ->
+                val selected = themeMode == value
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(
+                            if (selected) PrimarySoft else SurfaceColor,
+                            RoundedCornerShape(10.dp)
+                        )
+                        .border(
+                            1.dp,
+                            if (selected) Primary else BorderColor,
+                            RoundedCornerShape(10.dp)
+                        )
+                        .clickable { onThemeSelected(value) }
+                        .padding(horizontal = 5.dp, vertical = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = label,
+                        color = if (selected) Primary else MainText,
+                        fontSize = 11.sp,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(22.dp))
+
+        androidx.compose.material3.Button(
+            onClick = onContinue,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(54.dp),
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Primary)
+        ) {
+            Text(
+                text = "Accéder à mon espace  →",
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        Text(
+            text = "Gérez. Suivez. Avancez.",
+            color = SecondaryText,
+            fontSize = 12.sp
+        )
+    }
+}
+
+@Composable
+private fun DashboardScreen() {
     var showQuickActions by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf<String?>(null) }
 
