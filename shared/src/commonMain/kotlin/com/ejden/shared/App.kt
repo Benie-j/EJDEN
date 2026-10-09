@@ -76,9 +76,7 @@ fun EjdenApp(
         else -> systemDark
     }
 
-    SideEffect {
-        useDarkPalette = dark
-    }
+    SideEffect { useDarkPalette = dark }
 
     LaunchedEffect(Unit) {
         delay(5000)
@@ -86,22 +84,20 @@ fun EjdenApp(
     }
 
     MaterialTheme {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = Background
-        ) {
+        Surface(modifier = Modifier.fillMaxSize(), color = Background) {
             Crossfade(targetState = screen, animationSpec = tween(450)) { current ->
                 when (current) {
                     "splash" -> SplashScreen()
-                    "welcome" -> WelcomeScreen(
+                    "welcome" -> WelcomeScreen(onContinue = { screen = "dashboard" })
+                    "settings" -> SettingsScreen(
                         themeMode = themeMode,
                         onThemeSelected = { selected ->
                             themeMode = selected
                             onThemeChanged(selected)
                         },
-                        onContinue = { screen = "dashboard" }
+                        onBack = { screen = "dashboard" }
                     )
-                    else -> DashboardScreen()
+                    else -> DashboardScreen(onSettings = { screen = "settings" })
                 }
             }
         }
@@ -112,62 +108,30 @@ fun EjdenApp(
 private fun SplashScreen() {
     val transition = rememberInfiniteTransition()
     val scale by transition.animateFloat(
-        initialValue = 0.96f,
-        targetValue = 1.04f,
+        initialValue = 0.975f,
+        targetValue = 1.025f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1000),
+            animation = tween(1400),
             repeatMode = RepeatMode.Reverse
         )
     )
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background),
+        modifier = Modifier.fillMaxSize().background(Background),
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            EjdenLogo(
-                modifier = Modifier
-                    .size(118.dp)
-                    .then(Modifier),
-                color = Primary
-            )
-            Text(
-                text = "EJDEN",
-                color = Primary,
-                fontSize = 27.sp,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 3.sp,
-                modifier = Modifier
-            )
-            Text(
-                text = "Gérez. Suivez. Avancez.",
-                color = SecondaryText,
-                fontSize = 13.sp
-            )
-        }
-
+        EjdenLogo(modifier = Modifier.size((118f * scale).dp), color = Primary)
         Text(
             text = "by Benie Groupe",
             color = SecondaryText,
             fontSize = 11.sp,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 14.dp)
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 14.dp)
         )
     }
 }
 
 @Composable
-private fun WelcomeScreen(
-    themeMode: String,
-    onThemeSelected: (String) -> Unit,
-    onContinue: () -> Unit
-) {
+private fun WelcomeScreen(onContinue: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -252,53 +216,6 @@ private fun WelcomeScreen(
 
         Spacer(Modifier.height(22.dp))
 
-        Text(
-            text = "APPARENCE",
-            color = SecondaryText,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.2.sp
-        )
-
-        Spacer(Modifier.height(10.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(7.dp)
-        ) {
-            listOf(
-                "system" to "Automatique",
-                "light" to "Clair",
-                "dark" to "Sombre"
-            ).forEach { (value, label) ->
-                val selected = themeMode == value
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .background(
-                            if (selected) PrimarySoft else SurfaceColor,
-                            RoundedCornerShape(10.dp)
-                        )
-                        .border(
-                            1.dp,
-                            if (selected) Primary else BorderColor,
-                            RoundedCornerShape(10.dp)
-                        )
-                        .clickable { onThemeSelected(value) }
-                        .padding(horizontal = 5.dp, vertical = 12.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = label,
-                        color = if (selected) Primary else MainText,
-                        fontSize = 11.sp,
-                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
-                    )
-                }
-            }
-        }
-
-        Spacer(Modifier.height(22.dp))
 
         androidx.compose.material3.Button(
             onClick = onContinue,
@@ -316,18 +233,66 @@ private fun WelcomeScreen(
             )
         }
 
-        Spacer(Modifier.height(16.dp))
+}
+}
 
-        Text(
-            text = "Gérez. Suivez. Avancez.",
-            color = SecondaryText,
-            fontSize = 12.sp
-        )
+@Composable
+private fun SettingsScreen(
+    themeMode: String,
+    onThemeSelected: (String) -> Unit,
+    onBack: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().background(Background)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp)
+    ) {
+        androidx.compose.material3.TextButton(onClick = onBack) {
+            Text("← Retour au tableau de bord", color = Primary, fontWeight = FontWeight.SemiBold)
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("PARAMÈTRES", color = Primary, fontSize = 10.sp,
+                fontWeight = FontWeight.ExtraBold, letterSpacing = 1.4.sp)
+            Text("Apparence", color = MainText, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Text("Personnalisez l'affichage de votre espace EJDEN.", color = SecondaryText,
+                fontSize = 13.sp, lineHeight = 19.sp)
+        }
+        Column(
+            modifier = Modifier.fillMaxWidth().background(SurfaceColor, RoundedCornerShape(18.dp))
+                .border(1.dp, BorderColor, RoundedCornerShape(18.dp)).padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text("Thème", color = MainText, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Text("Automatique suit le réglage d'apparence de votre téléphone.",
+                color = SecondaryText, fontSize = 12.sp, lineHeight = 18.sp)
+            listOf("system" to "Automatique", "light" to "Clair", "dark" to "Sombre").forEach { (value, label) ->
+                val selected = themeMode == value
+                Row(
+                    modifier = Modifier.fillMaxWidth()
+                        .background(if (selected) PrimarySoft else Background, RoundedCornerShape(12.dp))
+                        .border(1.dp, if (selected) Primary else BorderColor, RoundedCornerShape(12.dp))
+                        .clickable { onThemeSelected(value) }
+                        .padding(horizontal = 14.dp, vertical = 15.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier.size(18.dp)
+                            .border(2.dp, if (selected) Primary else SecondaryText, CircleShape)
+                            .padding(4.dp)
+                            .background(if (selected) Primary else Color.Transparent, CircleShape)
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(label, color = if (selected) Primary else MainText, fontSize = 14.sp,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium)
+                }
+            }
+        }
     }
 }
 
 @Composable
-private fun DashboardScreen() {
+private fun DashboardScreen(onSettings: () -> Unit) {
     var showQuickActions by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf<String?>(null) }
 
@@ -341,9 +306,7 @@ private fun DashboardScreen() {
                     onNotifications = {
                         notice = "Les notifications seront reliées aux alertes de votre activité."
                     },
-                    onProfile = {
-                        notice = "Les paramètres seront intégrés dans leur écran dédié."
-                    }
+                    onProfile = onSettings
                 )
 
                 BoxWithConstraints(modifier = Modifier.weight(1f)) {
@@ -697,49 +660,34 @@ private fun EjdenLogo(
     color: Color = Primary
 ) {
     Canvas(modifier = modifier) {
-        val scale = size.width / 120f
-
-        drawCircle(
-            color = color.copy(alpha = 0.10f),
-            radius = 48f * scale,
-            center = Offset(size.width / 2, size.height / 2),
-            style = Stroke(width = 1.2f * scale)
-        )
-
-        fun line(points: List<Offset>, strokeWidth: Float = 7f) {
-            val path = Path().apply {
-                moveTo(points.first().x * scale, points.first().y * scale)
-                points.drop(1).forEach { point ->
-                    lineTo(point.x * scale, point.y * scale)
-                }
-            }
-            drawPath(
-                path = path,
-                color = color,
-                style = Stroke(
-                    width = strokeWidth * scale,
-                    cap = StrokeCap.Round
-                )
-            )
+        val s = size.width / 120f
+        fun x(v: Float) = v * s
+        drawCircle(color.copy(alpha = 0.08f), radius = 48f * s,
+            center = Offset(x(60f), x(60f)), style = Stroke(width = 1.2f * s))
+        val stroke = Stroke(width = 7f * s, cap = StrokeCap.Round,
+            join = androidx.compose.ui.graphics.StrokeJoin.Round)
+        val top = Path().apply {
+            moveTo(x(34f), x(38f))
+            cubicTo(x(42f), x(28f), x(54f), x(24f), x(67f), x(28f))
+            lineTo(x(84f), x(38f))
         }
-
-        line(listOf(Offset(34f, 38f), Offset(50f, 28f), Offset(67f, 28f), Offset(84f, 38f)))
-        line(listOf(Offset(34f, 38f), Offset(34f, 63f), Offset(40f, 75f), Offset(50f, 79f)))
-        line(listOf(Offset(50f, 79f), Offset(67f, 92f), Offset(80f, 95f), Offset(84f, 90f)))
-        line(listOf(Offset(84f, 38f), Offset(84f, 65f), Offset(78f, 78f), Offset(68f, 82f), Offset(50f, 82f)))
-
-        drawLine(
-            color = color,
-            start = Offset(49f * scale, 58f * scale),
-            end = Offset(70f * scale, 58f * scale),
-            strokeWidth = 5f * scale,
-            cap = StrokeCap.Round
-        )
-        drawCircle(
-            color = color,
-            radius = 4f * scale,
-            center = Offset(60f * scale, 58f * scale)
-        )
+        val left = Path().apply {
+            moveTo(x(34f), x(38f)); lineTo(x(34f), x(63f))
+            cubicTo(x(34f), x(72f), x(41f), x(79f), x(50f), x(79f))
+        }
+        val lower = Path().apply {
+            moveTo(x(50f), x(79f)); lineTo(x(67f), x(92f))
+            cubicTo(x(72f), x(96f), x(80f), x(95f), x(84f), x(90f))
+        }
+        val right = Path().apply {
+            moveTo(x(84f), x(38f)); lineTo(x(84f), x(65f))
+            cubicTo(x(84f), x(75f), x(78f), x(82f), x(68f), x(82f))
+            lineTo(x(50f), x(82f))
+        }
+        listOf(top, left, lower, right).forEach { drawPath(it, color, style = stroke) }
+        drawLine(color, Offset(x(49f), x(58f)), Offset(x(70f), x(58f)),
+            strokeWidth = 5f * s, cap = StrokeCap.Round)
+        drawCircle(color, radius = 4f * s, center = Offset(x(60f), x(58f)))
     }
 }
 
