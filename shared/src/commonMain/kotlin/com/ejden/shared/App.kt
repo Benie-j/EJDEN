@@ -260,54 +260,151 @@ private fun TopBar(
     onNotifications: () -> Unit,
     onProfile: () -> Unit
 ) {
-    Row(
+    var searchQuery by remember { mutableStateOf("") }
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(SurfaceColor)
-            .border(width = 1.dp, color = BorderColor)
-            .padding(horizontal = 16.dp, vertical = 13.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        EjdenLogo(
-            modifier = Modifier.size(39.dp),
-            color = Primary
-        )
-
-        Spacer(modifier = Modifier.width(10.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                "EJDEN",
-                color = MainText,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 1.2.sp
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            EjdenLogo(
+                modifier = Modifier.size(38.dp),
+                color = Primary
             )
-            Text(
-                "Gérez. Suivez. Avancez.",
-                color = LightText,
-                fontSize = 10.sp
-            )
-        }
 
-        TextButton(onClick = onNotifications) {
-            Text("♧", color = SecondaryText, fontSize = 22.sp)
-        }
+            Spacer(modifier = Modifier.width(9.dp))
 
-        TextButton(onClick = onProfile) {
-            Box(
-                modifier = Modifier
-                    .size(34.dp)
-                    .background(PrimarySoft, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "E",
-                    color = Primary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
+                    text = "EJDEN",
+                    color = MainText,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 1.2.sp
+                )
+                Text(
+                    text = "Bonjour",
+                    color = SecondaryText,
+                    fontSize = 12.sp
                 )
             }
+
+            TextButton(onClick = onNotifications) {
+                androidx.compose.foundation.Canvas(
+                    modifier = Modifier.size(22.dp)
+                ) {
+                    val bell = Path().apply {
+                        moveTo(size.width * 0.5f, size.height * 0.12f)
+                        cubicTo(
+                            size.width * 0.28f, size.height * 0.12f,
+                            size.width * 0.24f, size.height * 0.34f,
+                            size.width * 0.24f, size.height * 0.49f
+                        )
+                        lineTo(size.width * 0.17f, size.height * 0.76f)
+                        lineTo(size.width * 0.83f, size.height * 0.76f)
+                        lineTo(size.width * 0.76f, size.height * 0.49f)
+                        cubicTo(
+                            size.width * 0.76f, size.height * 0.34f,
+                            size.width * 0.72f, size.height * 0.12f,
+                            size.width * 0.5f, size.height * 0.12f
+                        )
+                    }
+                    drawPath(
+                        path = bell,
+                        color = SecondaryText,
+                        style = Stroke(
+                            width = 1.7.dp.toPx(),
+                            cap = StrokeCap.Round
+                        )
+                    )
+                    drawLine(
+                        color = SecondaryText,
+                        start = Offset(size.width * 0.40f, size.height * 0.85f),
+                        end = Offset(size.width * 0.60f, size.height * 0.85f),
+                        strokeWidth = 1.7.dp.toPx(),
+                        cap = StrokeCap.Round
+                    )
+                }
+            }
+
+            TextButton(onClick = onProfile) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .background(PrimarySoft, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "E",
+                            color = Primary,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Mon espace",
+                        color = MainText,
+                        fontSize = 10.sp,
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    color = Background,
+                    shape = RoundedCornerShape(13.dp)
+                )
+                .border(
+                    width = 1.dp,
+                    color = BorderColor,
+                    shape = RoundedCornerShape(13.dp)
+                )
+                .padding(horizontal = 12.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "⌕",
+                color = SecondaryText,
+                fontSize = 23.sp
+            )
+            Spacer(modifier = Modifier.width(9.dp))
+
+            androidx.compose.foundation.text.BasicTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(
+                    color = MainText,
+                    fontSize = 13.sp
+                ),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(Primary),
+                modifier = Modifier.weight(1f),
+                decorationBox = { innerTextField ->
+                    Box {
+                        if (searchQuery.isEmpty()) {
+                            Text(
+                                text = "Rechercher un produit...",
+                                color = LightText,
+                                fontSize = 13.sp
+                            )
+                        }
+                        innerTextField()
+                    }
+                }
+            )
         }
     }
 }
