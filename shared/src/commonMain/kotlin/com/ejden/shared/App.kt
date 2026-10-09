@@ -73,9 +73,9 @@ fun EjdenApp() {
                             .verticalScroll(rememberScrollState())
                             .padding(
                                 horizontal = if (wide) 28.dp else 16.dp,
-                                vertical = 22.dp
+                                vertical = if (wide) 22.dp else 16.dp
                             ),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(if (wide) 16.dp else 12.dp)
                     ) {
                         DashboardHeader(
                             wide = wide,
@@ -586,11 +586,11 @@ private fun KpiCard(
 ) {
     Column(
         modifier = modifier
-            .defaultMinSize(minHeight = 130.dp)
+            .defaultMinSize(minHeight = 112.dp)
             .background(SurfaceColor, RoundedCornerShape(13.dp))
             .border(1.dp, BorderColor, RoundedCornerShape(13.dp))
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(horizontal = 12.dp, vertical = 11.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
             data.title,
@@ -604,17 +604,28 @@ private fun KpiCard(
         Text(
             data.value,
             color = MainText,
-            fontSize = 26.sp,
+            fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             maxLines = 1
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(data.unit, color = LightText, fontSize = 10.sp)
-            Text(data.period, color = LightText, fontSize = 9.sp)
+            Text(
+                data.unit,
+                color = LightText,
+                fontSize = 9.sp,
+                maxLines = 1,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                data.period,
+                color = LightText,
+                fontSize = 8.sp,
+                maxLines = 1
+            )
         }
     }
 }
