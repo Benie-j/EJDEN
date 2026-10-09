@@ -375,10 +375,10 @@ private fun TopBar(
                 .padding(horizontal = 12.dp, vertical = 11.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "⌕",
+            EjdenIcon(
+                name = "search",
                 color = SecondaryText,
-                fontSize = 23.sp
+                modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(9.dp))
 
@@ -977,12 +977,12 @@ private fun BottomNavigation(onSelect: (String) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(SurfaceColor)
-            .border(width = 1.dp, color = BorderColor)
             .navigationBarsPadding()
-            .padding(horizontal = 6.dp, vertical = 7.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceEvenly
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .background(SurfaceColor, RoundedCornerShape(22.dp))
+            .border(1.dp, BorderColor, RoundedCornerShape(22.dp))
+            .padding(horizontal = 5.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         items.forEach { item ->
             val isAdd = item == "＋"
@@ -991,37 +991,188 @@ private fun BottomNavigation(onSelect: (String) -> Unit) {
             Column(
                 modifier = Modifier
                     .weight(1f)
+                    .heightIn(min = 52.dp)
                     .clickable { onSelect(item) }
-                    .padding(vertical = 2.dp),
+                    .padding(vertical = 3.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.Center
             ) {
                 if (isAdd) {
                     Box(
                         modifier = Modifier
-                            .size(42.dp)
-                            .background(Primary, RoundedCornerShape(14.dp)),
+                            .size(50.dp)
+                            .background(Primary, RoundedCornerShape(17.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("+", color = Color.White, fontSize = 28.sp)
+                        EjdenIcon(
+                            name = "add",
+                            color = Color.White,
+                            modifier = Modifier.size(25.dp)
+                        )
                     }
                 } else {
+                    Box(
+                        modifier = Modifier.height(25.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        EjdenIcon(
+                            name = when (item) {
+                                "Accueil" -> "home"
+                                "Ventes" -> "sales"
+                                "Produits" -> "products"
+                                else -> "more"
+                            },
+                            color = if (isHome) Primary else SecondaryText,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
                     Text(
-                        text = when (item) {
-                            "Accueil" -> "⌂"
-                            "Ventes" -> "▤"
-                            "Produits" -> "▦"
-                            else -> "•••"
+                        text = item,
+                        color = if (isHome) Primary else SecondaryText,
+                        fontSize = 10.sp,
+                        fontWeight = if (isHome) {
+                            FontWeight.Bold
+                        } else {
+                            FontWeight.Medium
                         },
-                        color = if (isHome) Primary else SecondaryText,
-                        fontSize = 21.sp,
-                        fontWeight = FontWeight.SemiBold
+                        maxLines = 1
                     )
-                    Text(
-                        item,
-                        color = if (isHome) Primary else SecondaryText,
-                        fontSize = 9.sp,
-                        fontWeight = if (isHome) FontWeight.Bold else FontWeight.Normal
+
+                    if (isHome) {
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Box(
+                            modifier = Modifier
+                                .width(4.dp)
+                                .height(4.dp)
+                                .background(Primary, CircleShape)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EjdenIcon(
+    name: String,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Canvas(modifier = modifier) {
+        val scale = size.minDimension / 24f
+        val stroke = Stroke(
+            width = 1.8.dp.toPx(),
+            cap = StrokeCap.Round,
+            join = androidx.compose.ui.graphics.StrokeJoin.Round
+        )
+
+        fun drawStroke(block: Path.() -> Unit) {
+            drawPath(
+                path = Path().apply(block),
+                color = color,
+                style = stroke
+            )
+        }
+
+        when (name) {
+            "home" -> {
+                drawStroke {
+                    moveTo(3f * scale, 10f * scale)
+                    lineTo(12f * scale, 3.5f * scale)
+                    lineTo(21f * scale, 10f * scale)
+                    moveTo(5.5f * scale, 9f * scale)
+                    lineTo(5.5f * scale, 20.5f * scale)
+                    lineTo(10f * scale, 20.5f * scale)
+                    lineTo(10f * scale, 15f * scale)
+                    lineTo(14f * scale, 15f * scale)
+                    lineTo(14f * scale, 20.5f * scale)
+                    lineTo(18.5f * scale, 20.5f * scale)
+                    lineTo(18.5f * scale, 9f * scale)
+                }
+            }
+
+            "sales" -> {
+                drawStroke {
+                    moveTo(6f * scale, 3.5f * scale)
+                    lineTo(18f * scale, 3.5f * scale)
+                    lineTo(18f * scale, 20.5f * scale)
+                    lineTo(15f * scale, 18.5f * scale)
+                    lineTo(12f * scale, 20.5f * scale)
+                    lineTo(9f * scale, 18.5f * scale)
+                    lineTo(6f * scale, 20.5f * scale)
+                    close()
+                    moveTo(9f * scale, 8f * scale)
+                    lineTo(15f * scale, 8f * scale)
+                    moveTo(9f * scale, 12f * scale)
+                    lineTo(15f * scale, 12f * scale)
+                    moveTo(9f * scale, 16f * scale)
+                    lineTo(12f * scale, 16f * scale)
+                }
+            }
+
+            "products" -> {
+                drawStroke {
+                    moveTo(12f * scale, 3f * scale)
+                    lineTo(21f * scale, 7.5f * scale)
+                    lineTo(12f * scale, 12f * scale)
+                    lineTo(3f * scale, 7.5f * scale)
+                    close()
+                    moveTo(3f * scale, 7.5f * scale)
+                    lineTo(3f * scale, 16.5f * scale)
+                    lineTo(12f * scale, 21f * scale)
+                    lineTo(21f * scale, 16.5f * scale)
+                    lineTo(21f * scale, 7.5f * scale)
+                    moveTo(12f * scale, 12f * scale)
+                    lineTo(12f * scale, 21f * scale)
+                }
+            }
+
+            "search" -> {
+                drawStroke {
+                    moveTo(14.8f * scale, 14.8f * scale)
+                    cubicTo(
+                        13.5f * scale, 16.1f * scale,
+                        11.8f * scale, 16.8f * scale,
+                        10f * scale, 16.8f * scale
+                    )
+                    cubicTo(
+                        6.2f * scale, 16.8f * scale,
+                        3.2f * scale, 13.8f * scale,
+                        3.2f * scale, 10f * scale
+                    )
+                    cubicTo(
+                        3.2f * scale, 6.2f * scale,
+                        6.2f * scale, 3.2f * scale,
+                        10f * scale, 3.2f * scale
+                    )
+                    cubicTo(
+                        13.8f * scale, 3.2f * scale,
+                        16.8f * scale, 6.2f * scale,
+                        16.8f * scale, 10f * scale
+                    )
+                    lineTo(21f * scale, 21f * scale)
+                }
+            }
+
+            "add" -> {
+                drawStroke {
+                    moveTo(12f * scale, 5f * scale)
+                    lineTo(12f * scale, 19f * scale)
+                    moveTo(5f * scale, 12f * scale)
+                    lineTo(19f * scale, 12f * scale)
+                }
+            }
+
+            "more" -> {
+                listOf(5f, 12f, 19f).forEach { x ->
+                    drawCircle(
+                        color = color,
+                        radius = 1.6f * scale,
+                        center = Offset(x * scale, 12f * scale)
                     )
                 }
             }
