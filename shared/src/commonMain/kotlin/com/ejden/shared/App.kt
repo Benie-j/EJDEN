@@ -1184,7 +1184,7 @@ private fun QuickAction(
 
 @Composable
 private fun BottomNavigation(onSelect: (String) -> Unit) {
-    val items = listOf("Accueil", "Ventes", "＋", "Produits", "Plus")
+    val items = listOf("Accueil", "Ventes", "＋", "Stock", "Plus")
 
     Row(
         modifier = Modifier
@@ -1231,7 +1231,7 @@ private fun BottomNavigation(onSelect: (String) -> Unit) {
                             name = when (item) {
                                 "Accueil" -> "home"
                                 "Ventes" -> "sales"
-                                "Produits" -> "products"
+                                "Stock" -> "stock"
                                 else -> "more"
                             },
                             color = if (isHome) Primary else SecondaryText,
@@ -1340,6 +1340,22 @@ private fun EjdenIcon(
                     lineTo(21f * scale, 7.5f * scale)
                     moveTo(12f * scale, 12f * scale)
                     lineTo(12f * scale, 21f * scale)
+                }
+            }
+
+            "stock" -> {
+                drawStroke {
+                    moveTo(3f * scale, 9f * scale)
+                    lineTo(12f * scale, 4f * scale)
+                    lineTo(21f * scale, 9f * scale)
+                    moveTo(5f * scale, 10f * scale)
+                    lineTo(5f * scale, 20f * scale)
+                    lineTo(19f * scale, 20f * scale)
+                    lineTo(19f * scale, 10f * scale)
+                    moveTo(9f * scale, 20f * scale)
+                    lineTo(9f * scale, 14f * scale)
+                    lineTo(15f * scale, 14f * scale)
+                    lineTo(15f * scale, 20f * scale)
                 }
             }
 
