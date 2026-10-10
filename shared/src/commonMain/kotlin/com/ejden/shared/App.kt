@@ -68,8 +68,10 @@ fun EjdenApp(
     initialTheme: String = "system",
     onThemeChanged: (String) -> Unit = {},
     products: List<ProductUi> = emptyList(),
+    recentMovements: List<StockMovementUi> = emptyList(),
     onAddProduct: (ProductDraft) -> Unit = {},
     onDeleteProduct: (Long) -> Unit = {},
+    onStockMovement: (StockMovementDraft) -> Unit = {},
     registerBackHandler: (((() -> Unit)?) -> Unit) = {},
     onExitApp: () -> Unit = {}
 ) {
@@ -123,8 +125,10 @@ fun EjdenApp(
                     )
                     "stock" -> StockScreen(
                         products = products,
+                        recentMovements = recentMovements,
                         onAddProduct = { screen = "add_product" },
                         onDeleteProduct = onDeleteProduct,
+                        onStockMovement = onStockMovement,
                         onBack = { screen = "dashboard" }
                     )
                     "add_product" -> ProductFormScreen(
@@ -331,166 +335,481 @@ private fun SettingsScreen(
 @Composable
 private fun StockScreen(
     products: List<ProductUi>,
+    recentMovements: List<StockMovementUi>,
     onAddProduct: () -> Unit,
     onDeleteProduct: (Long) -> Unit,
+    onStockMovement: (StockMovementDraft) -> Unit,
     onBack: () -> Unit
 ) {
+    var search by remember { mutableStateOf("") }
+    var filter by remember { mutableStateOf("Tous") }
+    var expandedId by remember { mutableStateOf<Long?>(null) }
     var pendingDelete by remember { mutableStateOf<ProductUi?>(null) }
+    var movementProduct by remember { mutableStateOf<ProductUi?>(null) }
+    var movementType by remember { mutableStateOf("in") }
+    var movementQuantity by remember { mutableStateOf("") }
+    var movementReason by remember { mutableStateOf("Réapprovisionnement") }
+    var movementNote by remember { mutableStateOf("") }
+    var movementError by remember { mutableStateOf<String?>(null) }
 
     val lowStock = products.count {
         it.quantity > 0.0 && it.quantity <= it.minQuantity
     }
     val outOfStock = products.count { it.quantity <= 0.0 }
+    val knownPurchaseValue = products.sumOf {
+        it.quantity * it.purchasePriceCfa
+    }
+    val filteredProducts = products.filter { product ->
+        val matchesSearch =
+            product.name.contains(search.trim(), ignoreCase = true) ||
+            (product.barcode?.contains(search.trim(), ignoreCase = true) == true)
+        val matchesFilter = when (filter) {
+            "Stock faible" -> product.quantity > 0.0 &&
+                product.quantity <= product.minQuantity
+            "Rupture" -> product.quantity <= 0.0
+            else -> true
+        }
+        matchesSearch && matchesFilter
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Background)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 18.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         TextButton(onClick = onBack) {
-            Text("← Retour au tableau de bord", color = Primary)
+            Text("← Tableau de bord", color = Primary)
         }
 
-        Text(
-            "GESTION",
-            color = Primary,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.ExtraBold,
-            letterSpacing = 1.4.sp
-        )
-        Text(
-            "Stock",
-            color = MainText,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            "Retrouvez vos produits et suivez leurs quantités.",
-            color = SecondaryText,
-            fontSize = 13.sp
-        )
+        Text("GESTION DES PRODUITS", color = Primary,
+            fontSize = 10.sp, fontWeight = FontWeight.ExtraBold,
+            letterSpacing = 1.3.sp)
+        Text("Stock", color = MainText, fontSize = 29.sp,
+            fontWeight = FontWeight.Bold)
+        Text("Contrôlez les quantités, les alertes et les mouvements.",
+            color = SecondaryText, fontSize = 13.sp)
 
         Button(
             onClick = onAddProduct,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(13.dp)
         ) {
-            Text("+ Ajouter un produit")
+            Text("+  Ajouter un produit")
         }
 
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            StockMetric(
-                "Produits",
-                products.size.toString(),
-                Primary,
-                Modifier.weight(1f)
-            )
-            StockMetric(
-                "Stock faible",
-                lowStock.toString(),
-                Warning,
-                Modifier.weight(1f)
-            )
-            StockMetric(
-                "Ruptures",
-                outOfStock.toString(),
-                Error,
-                Modifier.weight(1f)
-            )
+            StockMetric("Produits", products.size.toString(),
+                Primary, Modifier.weight(1f))
+            StockMetric("Stock faible", lowStock.toString(),
+                Warning, Modifier.weight(1f))
+            StockMetric("Ruptures", outOfStock.toString(),
+                Error, Modifier.weight(1f))
         }
 
-        if (products.isEmpty()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(SurfaceColor, RoundedCornerShape(18.dp))
-                    .border(1.dp, BorderColor, RoundedCornerShape(18.dp))
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                EjdenIcon(
-                    name = "stock",
-                    color = Primary,
-                    modifier = Modifier.size(36.dp)
-                )
-                Text(
-                    "Aucun produit enregistré",
-                    color = MainText,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    "Ajoutez votre premier produit pour commencer à gérer votre stock.",
-                    color = SecondaryText,
-                    fontSize = 13.sp
+        Column(
+            modifier = Modifier.fillMaxWidth()
+                .background(SurfaceColor, RoundedCornerShape(16.dp))
+                .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            Text("Valeur d'achat du stock connu",
+                color = SecondaryText, fontSize = 12.sp)
+            Text(
+                "${"%,.0f".format(knownPurchaseValue)} FCFA",
+                color = MainText, fontSize = 21.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text("Calcul basé sur les prix d'achat renseignés.",
+                color = LightText, fontSize = 11.sp)
+        }
+
+        OutlinedTextField(
+            value = search,
+            onValueChange = { search = it },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            label = { Text("Rechercher un produit") },
+            placeholder = { Text("Nom ou code-barres") },
+            shape = RoundedCornerShape(13.dp)
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            listOf("Tous", "Stock faible", "Rupture").forEach { option ->
+                FilterChip(
+                    selected = filter == option,
+                    onClick = { filter = option },
+                    label = { Text(option, fontSize = 11.sp) }
                 )
             }
-        } else {
-            products.forEach { product ->
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(SurfaceColor, RoundedCornerShape(16.dp))
-                        .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(7.dp)
-                ) {
-                    Text(
-                        product.name,
-                        color = MainText,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
+        }
 
-                    product.barcode?.let {
-                        Text("Code : $it", color = SecondaryText, fontSize = 12.sp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Produits enregistrés", color = MainText,
+                fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Text("${filteredProducts.size} résultat(s)",
+                color = SecondaryText, fontSize = 11.sp)
+        }
+
+        if (filteredProducts.isEmpty()) {
+            Column(
+                modifier = Modifier.fillMaxWidth()
+                    .background(SurfaceColor, RoundedCornerShape(16.dp))
+                    .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
+                    .padding(22.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    if (products.isEmpty()) "Votre stock est vide"
+                    else "Aucun résultat",
+                    color = MainText, fontWeight = FontWeight.Bold
+                )
+                Text(
+                    if (products.isEmpty())
+                        "Ajoutez un produit pour commencer."
+                    else "Essayez un autre nom ou filtre.",
+                    color = SecondaryText, fontSize = 12.sp
+                )
+            }
+        }
+
+        filteredProducts.forEach { product ->
+            val isExpanded = expandedId == product.id
+            val isOut = product.quantity <= 0.0
+            val isLow = !isOut && product.quantity <= product.minQuantity
+            val statusColor = when {
+                isOut -> Error
+                isLow -> Warning
+                else -> Success
+            }
+            val status = when {
+                isOut -> "Rupture de stock"
+                isLow -> "Stock faible"
+                else -> "Disponible"
+            }
+
+            Column(
+                modifier = Modifier.fillMaxWidth()
+                    .background(SurfaceColor, RoundedCornerShape(16.dp))
+                    .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
+                    .clickable {
+                        expandedId = if (isExpanded) null else product.id
+                    }
+                    .padding(15.dp),
+                verticalArrangement = Arrangement.spacedBy(9.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Top,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Text(product.name, color = MainText,
+                            fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        product.barcode?.takeIf { it.isNotBlank() }?.let {
+                            Text("Code-barres : $it",
+                                color = SecondaryText, fontSize = 11.sp)
+                        }
+                        Text(status, color = statusColor,
+                            fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("${product.quantity}",
+                            color = statusColor, fontSize = 21.sp,
+                            fontWeight = FontWeight.Bold)
+                        Text("en stock", color = SecondaryText, fontSize = 10.sp)
+                    }
+                }
+
+                HorizontalDivider(color = BorderColor)
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text("Prix de vente", color = SecondaryText, fontSize = 10.sp)
+                        Text("${"%,.0f".format(product.priceCfa)} F",
+                            color = MainText, fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold)
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("Seuil d'alerte", color = SecondaryText, fontSize = 10.sp)
+                        Text("${product.minQuantity}",
+                            color = MainText, fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold)
+                    }
+                }
+
+                if (isExpanded) {
+                    HorizontalDivider(color = BorderColor)
+                    Text("DÉTAILS DU PRODUIT", color = Primary,
+                        fontSize = 10.sp, fontWeight = FontWeight.Bold)
+
+                    Text(
+                        if (product.purchasePriceCfa > 0)
+                            "Prix d'achat : ${"%,.0f".format(product.purchasePriceCfa)} FCFA"
+                        else "Prix d'achat non renseigné",
+                        color = SecondaryText, fontSize = 12.sp
+                    )
+                    if (product.purchasePriceCfa > 0) {
+                        Text(
+                            "Valeur en stock : ${"%,.0f".format(product.quantity * product.purchasePriceCfa)} FCFA",
+                            color = MainText, fontSize = 12.sp
+                        )
                     }
 
-                    Text(
-                        "Prix : ${product.priceCfa} FCFA",
-                        color = MainText,
-                        fontSize = 14.sp
-                    )
-                    Text(
-                        "Quantité : ${product.quantity}",
-                        color = if (product.quantity <= 0.0) Error
-                            else if (product.quantity <= product.minQuantity) Warning
-                            else Success,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp
-                    )
+                    Text("Mouvements récents", color = MainText,
+                        fontSize = 13.sp, fontWeight = FontWeight.Bold)
+
+                    val productMovements = recentMovements
+                        .filter { it.productId == product.id }
+                        .take(5)
+
+                    if (productMovements.isEmpty()) {
+                        Text("Aucun mouvement enregistré.",
+                            color = SecondaryText, fontSize = 11.sp)
+                    } else {
+                        productMovements.forEach { movement ->
+                            val movementLabel = when (movement.type) {
+                                "in" -> "Entrée"
+                                "out" -> "Sortie"
+                                else -> "Inventaire"
+                            }
+                            Text(
+                                "$movementLabel · ${movement.quantity} · ${movement.reason}",
+                                color = SecondaryText, fontSize = 11.sp
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(7.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                movementProduct = product
+                                movementType = "in"
+                                movementQuantity = ""
+                                movementReason = "Réapprovisionnement"
+                                movementNote = ""
+                                movementError = null
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) { Text("Entrée", fontSize = 11.sp) }
+
+                        OutlinedButton(
+                            onClick = {
+                                movementProduct = product
+                                movementType = "out"
+                                movementQuantity = ""
+                                movementReason = "Vente"
+                                movementNote = ""
+                                movementError = null
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) { Text("Sortie", fontSize = 11.sp) }
+
+                        OutlinedButton(
+                            onClick = {
+                                movementProduct = product
+                                movementType = "adjust"
+                                movementQuantity = product.quantity.toString()
+                                movementReason = "Correction d'inventaire"
+                                movementNote = ""
+                                movementError = null
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) { Text("Inventaire", fontSize = 10.sp) }
+                    }
+
                     TextButton(onClick = { pendingDelete = product }) {
-                        Text("Supprimer", color = Error)
+                        Text("Supprimer le produit", color = Error)
+                    }
+                } else {
+                    Text("Toucher pour voir les détails et les actions",
+                        color = LightText, fontSize = 10.sp)
+                }
+            }
+        }
+
+        Text("MOUVEMENTS RÉCENTS", color = Primary,
+            fontSize = 11.sp, fontWeight = FontWeight.ExtraBold,
+            letterSpacing = 1.sp)
+        Text("Historique des entrées, sorties et inventaires",
+            color = SecondaryText, fontSize = 12.sp)
+
+        if (recentMovements.isEmpty()) {
+            Text("Aucun mouvement pour le moment.",
+                color = SecondaryText, fontSize = 12.sp)
+        } else {
+            recentMovements.take(15).forEach { movement ->
+                val label = when (movement.type) {
+                    "in" -> "Entrée"
+                    "out" -> "Sortie"
+                    else -> "Inventaire"
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth()
+                        .background(SurfaceColor, RoundedCornerShape(12.dp))
+                        .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(movement.productName, color = MainText,
+                            fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text("$label · ${movement.reason}",
+                            color = SecondaryText, fontSize = 10.sp)
+                        if (movement.note.isNotBlank()) {
+                            Text(movement.note, color = LightText, fontSize = 10.sp)
+                        }
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            if (movement.type == "out") "-${movement.quantity}"
+                            else if (movement.type == "in") "+${movement.quantity}"
+                            else "→ ${movement.afterQuantity}",
+                            color = if (movement.type == "out") Error else Success,
+                            fontSize = 13.sp, fontWeight = FontWeight.Bold
+                        )
+                        Text("${movement.beforeQuantity} → ${movement.afterQuantity}",
+                            color = SecondaryText, fontSize = 9.sp)
                     }
                 }
             }
         }
+        Spacer(modifier = Modifier.height(12.dp))
     }
 
     pendingDelete?.let { product ->
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
             title = { Text("Supprimer ce produit ?") },
-            text = {
-                Text("« ${product.name} » sera retiré du stock enregistré.")
-            },
+            text = { Text("« ${product.name} » sera retiré du stock enregistré.") },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        onDeleteProduct(product.id)
-                        pendingDelete = null
-                    }
-                ) {
-                    Text("Supprimer", color = Error)
-                }
+                TextButton(onClick = {
+                    onDeleteProduct(product.id)
+                    pendingDelete = null
+                }) { Text("Supprimer", color = Error) }
             },
             dismissButton = {
                 TextButton(onClick = { pendingDelete = null }) {
+                    Text("Annuler")
+                }
+            }
+        )
+    }
+
+    movementProduct?.let { product ->
+        AlertDialog(
+            onDismissRequest = { movementProduct = null },
+            title = {
+                Text(
+                    when (movementType) {
+                        "in" -> "Entrée de stock"
+                        "out" -> "Sortie de stock"
+                        else -> "Inventaire physique"
+                    }
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(product.name, color = SecondaryText, fontSize = 12.sp)
+                    Text(
+                        if (movementType == "adjust")
+                            "Saisissez la quantité réellement comptée."
+                        else "Stock actuel : ${product.quantity}",
+                        color = SecondaryText, fontSize = 12.sp
+                    )
+                    OutlinedTextField(
+                        value = movementQuantity,
+                        onValueChange = { movementQuantity = it; movementError = null },
+                        label = {
+                            Text(if (movementType == "adjust")
+                                "Quantité comptée" else "Quantité")
+                        },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    )
+                    Text("Motif", color = MainText, fontSize = 12.sp)
+                    val reasons = when (movementType) {
+                        "in" -> listOf("Réapprovisionnement", "Retour client", "Autre")
+                        "out" -> listOf("Vente", "Produit endommagé", "Perte", "Autre")
+                        else -> listOf("Correction d'inventaire", "Autre")
+                    }
+                    reasons.forEach { reason ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                movementReason = reason
+                            }
+                        ) {
+                            RadioButton(
+                                selected = movementReason == reason,
+                                onClick = { movementReason = reason }
+                            )
+                            Text(reason, color = MainText, fontSize = 12.sp)
+                        }
+                    }
+                    OutlinedTextField(
+                        value = movementNote,
+                        onValueChange = { movementNote = it },
+                        label = { Text("Note (facultatif)") },
+                        singleLine = true
+                    )
+                    movementError?.let {
+                        Text(it, color = Error, fontSize = 12.sp)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val quantity = movementQuantity.trim()
+                        .replace(',', '.').toDoubleOrNull()
+                    when {
+                        quantity == null || !quantity.isFinite() || quantity < 0.0 ->
+                            movementError = "Saisissez une quantité valide."
+                        movementType != "adjust" && quantity == 0.0 ->
+                            movementError = "La quantité doit être supérieure à zéro."
+                        movementType == "out" && quantity > product.quantity ->
+                            movementError = "La quantité dépasse le stock disponible."
+                        else -> {
+                            onStockMovement(
+                                StockMovementDraft(
+                                    productId = product.id,
+                                    type = movementType,
+                                    quantity = quantity,
+                                    reason = movementReason,
+                                    note = movementNote.trim()
+                                )
+                            )
+                            movementProduct = null
+                        }
+                    }
+                }) { Text("Enregistrer") }
+            },
+            dismissButton = {
+                TextButton(onClick = { movementProduct = null }) {
                     Text("Annuler")
                 }
             }
