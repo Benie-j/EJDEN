@@ -135,6 +135,7 @@ fun EjdenApp(
                         onBack = { screen = "stock" }
                     )
                     else -> DashboardScreen(
+                        products = products,
                         onSettings = { screen = "settings" },
                         onStock = { screen = "stock" }
                     )
@@ -612,7 +613,11 @@ private fun ProductFormScreen(
 }
 
 @Composable
-private fun DashboardScreen(onSettings: () -> Unit, onStock: () -> Unit) {
+private fun DashboardScreen(
+    products: List<ProductUi>,
+    onSettings: () -> Unit,
+    onStock: () -> Unit
+) {
     var showQuickActions by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf<String?>(null) }
 
@@ -669,7 +674,10 @@ private fun DashboardScreen(onSettings: () -> Unit, onStock: () -> Unit) {
 
                         RecentSalesPanel()
 
-                        StockPanel()
+                        StockPanel(
+                            products = products,
+                            onManage = onStock
+                        )
 
                         if (wide) {
                             Row(
@@ -1399,23 +1407,47 @@ private fun RecentSalesPanel() {
 }
 
 @Composable
-private fun StockPanel() {
+private fun StockPanel(
+    products: List<ProductUi>,
+    onManage: () -> Unit
+) {
+    val lowStock = products.count {
+        it.quantity > 0.0 && it.quantity <= it.minQuantity
+    }
+    val outOfStock = products.count { it.quantity <= 0.0 }
+
+    val stockMessage = when {
+        products.isEmpty() -> "Aucun produit enregistré."
+        outOfStock > 0 -> "$outOfStock produit(s) en rupture de stock."
+        lowStock > 0 -> "$lowStock produit(s) ont un stock faible."
+        else -> "Tous les produits ont un stock suffisant."
+    }
+
     Panel(
         eyebrow = "INVENTAIRE",
         title = "Stock",
         action = "Gérer",
-        onAction = { }
+        onAction = onManage
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            StockMetric("Produits", "0", Primary, Modifier.weight(1f))
-            StockMetric("Stock faible", "0", Warning, Modifier.weight(1f))
-            StockMetric("Ruptures", "0", Error, Modifier.weight(1f))
+            StockMetric(
+                "Produits", products.size.toString(),
+                Primary, Modifier.weight(1f)
+            )
+            StockMetric(
+                "Stock faible", lowStock.toString(),
+                Warning, Modifier.weight(1f)
+            )
+            StockMetric(
+                "Ruptures", outOfStock.toString(),
+                Error, Modifier.weight(1f)
+            )
         }
         Text(
-            "Aucun produit à surveiller.",
+            stockMessage,
             color = SecondaryText,
             fontSize = 11.sp,
             modifier = Modifier
