@@ -21,6 +21,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -65,7 +66,10 @@ private val Error = Color(0xFFD64545)
 @Composable
 fun EjdenApp(
     initialTheme: String = "system",
-    onThemeChanged: (String) -> Unit = {}
+    onThemeChanged: (String) -> Unit = {},
+    products: List<ProductUi> = emptyList(),
+    onAddProduct: (ProductDraft) -> Unit = {},
+    onDeleteProduct: (Long) -> Unit = {}
 ) {
     var themeMode by remember { mutableStateOf(initialTheme) }
     var screen by remember { mutableStateOf("splash") }
@@ -97,7 +101,23 @@ fun EjdenApp(
                         },
                         onBack = { screen = "dashboard" }
                     )
-                    else -> DashboardScreen(onSettings = { screen = "settings" })
+                    "stock" -> StockScreen(
+                        products = products,
+                        onAddProduct = { screen = "add_product" },
+                        onDeleteProduct = onDeleteProduct,
+                        onBack = { screen = "dashboard" }
+                    )
+                    "add_product" -> ProductFormScreen(
+                        onSave = { product ->
+                            onAddProduct(product)
+                            screen = "stock"
+                        },
+                        onBack = { screen = "stock" }
+                    )
+                    else -> DashboardScreen(
+                        onSettings = { screen = "settings" },
+                        onStock = { screen = "stock" }
+                    )
                 }
             }
         }
@@ -263,7 +283,291 @@ private fun SettingsScreen(
 }
 
 @Composable
-private fun DashboardScreen(onSettings: () -> Unit) {
+private fun StockScreen(
+    products: List<ProductUi>,
+    onAddProduct: () -> Unit,
+    onDeleteProduct: (Long) -> Unit,
+    onBack: () -> Unit
+) {
+    var pendingDelete by remember { mutableStateOf<ProductUi?>(null) }
+
+    val lowStock = products.count {
+        it.quantity > 0.0 && it.quantity <= it.minQuantity
+    }
+    val outOfStock = products.count { it.quantity <= 0.0 }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Background)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        TextButton(onClick = onBack) {
+            Text("← Retour au tableau de bord", color = Primary)
+        }
+
+        Text(
+            "GESTION",
+            color = Primary,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = 1.4.sp
+        )
+        Text(
+            "Stock",
+            color = MainText,
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            "Retrouvez vos produits et suivez leurs quantités.",
+            color = SecondaryText,
+            fontSize = 13.sp
+        )
+
+        Button(
+            onClick = onAddProduct,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("+ Ajouter un produit")
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            StockMetric(
+                "Produits",
+                products.size.toString(),
+                Primary,
+                Modifier.weight(1f)
+            )
+            StockMetric(
+                "Stock faible",
+                lowStock.toString(),
+                Warning,
+                Modifier.weight(1f)
+            )
+            StockMetric(
+                "Ruptures",
+                outOfStock.toString(),
+                Error,
+                Modifier.weight(1f)
+            )
+        }
+
+        if (products.isEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(SurfaceColor, RoundedCornerShape(18.dp))
+                    .border(1.dp, BorderColor, RoundedCornerShape(18.dp))
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                EjdenIcon(
+                    name = "stock",
+                    color = Primary,
+                    modifier = Modifier.size(36.dp)
+                )
+                Text(
+                    "Aucun produit enregistré",
+                    color = MainText,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "Ajoutez votre premier produit pour commencer à gérer votre stock.",
+                    color = SecondaryText,
+                    fontSize = 13.sp
+                )
+            }
+        } else {
+            products.forEach { product ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(SurfaceColor, RoundedCornerShape(16.dp))
+                        .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
+                    Text(
+                        product.name,
+                        color = MainText,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+
+                    product.barcode?.let {
+                        Text("Code : $it", color = SecondaryText, fontSize = 12.sp)
+                    }
+
+                    Text(
+                        "Prix : ${product.priceCfa} FCFA",
+                        color = MainText,
+                        fontSize = 14.sp
+                    )
+                    Text(
+                        "Quantité : ${product.quantity}",
+                        color = if (product.quantity <= 0.0) Error
+                            else if (product.quantity <= product.minQuantity) Warning
+                            else Success,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp
+                    )
+                    TextButton(onClick = { pendingDelete = product }) {
+                        Text("Supprimer", color = Error)
+                    }
+                }
+            }
+        }
+    }
+
+    pendingDelete?.let { product ->
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text("Supprimer ce produit ?") },
+            text = {
+                Text("« ${product.name} » sera retiré du stock enregistré.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeleteProduct(product.id)
+                        pendingDelete = null
+                    }
+                ) {
+                    Text("Supprimer", color = Error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDelete = null }) {
+                    Text("Annuler")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun ProductFormScreen(
+    onSave: (ProductDraft) -> Unit,
+    onBack: () -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var barcode by remember { mutableStateOf("") }
+    var price by remember { mutableStateOf("") }
+    var quantity by remember { mutableStateOf("") }
+    var minimum by remember { mutableStateOf("2") }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Background)
+            .verticalScroll(rememberScrollState())
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        TextButton(onClick = onBack) {
+            Text("← Retour au stock", color = Primary)
+        }
+
+        Text(
+            "Nouveau produit",
+            color = MainText,
+            fontSize = 26.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            "Les informations seront enregistrées sur ce téléphone.",
+            color = SecondaryText,
+            fontSize = 13.sp
+        )
+
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it; error = null },
+            label = { Text("Nom du produit *") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+        OutlinedTextField(
+            value = barcode,
+            onValueChange = { barcode = it },
+            label = { Text("Code-barres (facultatif)") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+        OutlinedTextField(
+            value = price,
+            onValueChange = { price = it },
+            label = { Text("Prix de vente en FCFA *") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+        OutlinedTextField(
+            value = quantity,
+            onValueChange = { quantity = it },
+            label = { Text("Quantité disponible *") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+        OutlinedTextField(
+            value = minimum,
+            onValueChange = { minimum = it },
+            label = { Text("Seuil de stock faible") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+
+        error?.let {
+            Text(it, color = Error, fontSize = 13.sp)
+        }
+
+        Button(
+            onClick = {
+                val parsedPrice = price.trim().toLongOrNull()
+                val parsedQuantity = quantity.trim().replace(",", ".").toDoubleOrNull()
+                val parsedMinimum = minimum.trim().replace(",", ".").toDoubleOrNull()
+
+                error = when {
+                    name.isBlank() -> "Saisissez le nom du produit."
+                    parsedPrice == null || parsedPrice < 0L ->
+                        "Saisissez un prix valide en FCFA."
+                    parsedQuantity == null || !parsedQuantity.isFinite() ||
+                        parsedQuantity < 0.0 ->
+                        "Saisissez une quantité valide."
+                    parsedMinimum == null || !parsedMinimum.isFinite() ||
+                        parsedMinimum < 0.0 ->
+                        "Saisissez un seuil de stock valide."
+                    else -> null
+                }
+
+                if (error == null) {
+                    onSave(
+                        ProductDraft(
+                            name = name.trim(),
+                            barcode = barcode.trim().takeIf { it.isNotEmpty() },
+                            priceCfa = parsedPrice!!,
+                            quantity = parsedQuantity!!,
+                            minQuantity = parsedMinimum!!
+                        )
+                    )
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Enregistrer le produit")
+        }
+    }
+}
+
+@Composable
+private fun DashboardScreen(onSettings: () -> Unit, onStock: () -> Unit) {
     var showQuickActions by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf<String?>(null) }
 
@@ -388,6 +692,8 @@ private fun DashboardScreen(onSettings: () -> Unit) {
                     onSelect = { item ->
                         if (item == "＋") {
                             showQuickActions = true
+                        } else if (item == "Stock") {
+                            onStock()
                         } else if (item != "Accueil") {
                             notice = "La section $item sera raccordée à son écran natif."
                         }
@@ -1345,17 +1651,35 @@ private fun EjdenIcon(
 
             "stock" -> {
                 drawStroke {
-                    moveTo(3f * scale, 9f * scale)
-                    lineTo(12f * scale, 4f * scale)
-                    lineTo(21f * scale, 9f * scale)
-                    moveTo(5f * scale, 10f * scale)
-                    lineTo(5f * scale, 20f * scale)
-                    lineTo(19f * scale, 20f * scale)
-                    lineTo(19f * scale, 10f * scale)
-                    moveTo(9f * scale, 20f * scale)
-                    lineTo(9f * scale, 14f * scale)
-                    lineTo(15f * scale, 14f * scale)
-                    lineTo(15f * scale, 20f * scale)
+                    moveTo(5f * scale, 3f * scale)
+                    lineTo(5f * scale, 21f * scale)
+                    moveTo(19f * scale, 3f * scale)
+                    lineTo(19f * scale, 21f * scale)
+
+                    moveTo(3f * scale, 8f * scale)
+                    lineTo(21f * scale, 8f * scale)
+                    moveTo(3f * scale, 14f * scale)
+                    lineTo(21f * scale, 14f * scale)
+                    moveTo(3f * scale, 20f * scale)
+                    lineTo(21f * scale, 20f * scale)
+
+                    moveTo(7f * scale, 4f * scale)
+                    lineTo(11f * scale, 4f * scale)
+                    lineTo(11f * scale, 7f * scale)
+                    lineTo(7f * scale, 7f * scale)
+                    close()
+
+                    moveTo(13f * scale, 10f * scale)
+                    lineTo(17f * scale, 10f * scale)
+                    lineTo(17f * scale, 13f * scale)
+                    lineTo(13f * scale, 13f * scale)
+                    close()
+
+                    moveTo(7f * scale, 15f * scale)
+                    lineTo(11f * scale, 15f * scale)
+                    lineTo(11f * scale, 19f * scale)
+                    lineTo(7f * scale, 19f * scale)
+                    close()
                 }
             }
 

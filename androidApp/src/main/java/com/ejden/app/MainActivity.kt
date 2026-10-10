@@ -3,7 +3,14 @@ package com.ejden.app
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberCoroutineScope
+import com.ejden.app.data.EjdenDatabase
+import com.ejden.app.data.ProductRepository
 import com.ejden.shared.EjdenApp
+import com.ejden.shared.ProductUi
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -15,12 +22,30 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val initialTheme = preferences.getString("theme_mode", "system") ?: "system"
+        val repository = ProductRepository(
+            EjdenDatabase.getInstance(applicationContext).productDao()
+        )
 
         setContent {
+            val products by produceState(
+                initialValue = emptyList<ProductUi>(),
+                repository
+            ) {
+                repository.observeProducts().collect { value = it }
+            }
+            val scope = rememberCoroutineScope()
+
             EjdenApp(
                 initialTheme = initialTheme,
                 onThemeChanged = { selected ->
                     preferences.edit().putString("theme_mode", selected).apply()
+                },
+                products = products,
+                onAddProduct = { product ->
+                    scope.launch { repository.addProduct(product) }
+                },
+                onDeleteProduct = { id ->
+                    scope.launch { repository.deleteProduct(id) }
                 }
             )
         }
