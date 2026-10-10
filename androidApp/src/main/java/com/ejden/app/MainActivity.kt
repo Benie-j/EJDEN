@@ -1,5 +1,6 @@
 package com.ejden.app
 
+import androidx.compose.runtime.setValue
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
