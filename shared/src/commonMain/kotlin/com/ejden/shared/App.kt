@@ -69,11 +69,31 @@ fun EjdenApp(
     onThemeChanged: (String) -> Unit = {},
     products: List<ProductUi> = emptyList(),
     onAddProduct: (ProductDraft) -> Unit = {},
-    onDeleteProduct: (Long) -> Unit = {}
+    onDeleteProduct: (Long) -> Unit = {},
+    registerBackHandler: (((() -> Unit)?) -> Unit) = {},
+    onExitApp: () -> Unit = {}
 ) {
     var themeMode by remember { mutableStateOf(initialTheme) }
     var screen by remember { mutableStateOf("splash") }
+    var showExitConfirmation by remember { mutableStateOf(false) }
     val systemDark = isSystemInDarkTheme()
+
+    DisposableEffect(screen, showExitConfirmation) {
+        registerBackHandler {
+            when {
+                showExitConfirmation ->
+                    showExitConfirmation = false
+                screen == "add_product" ->
+                    screen = "stock"
+                screen == "stock" || screen == "settings" ->
+                    screen = "dashboard"
+                screen == "dashboard" ->
+                    showExitConfirmation = true
+                else -> Unit
+            }
+        }
+        onDispose { registerBackHandler(null) }
+    }
     val dark = when (themeMode) {
         "dark" -> true
         "light" -> false
@@ -119,6 +139,31 @@ fun EjdenApp(
                         onStock = { screen = "stock" }
                     )
                 }
+            }
+
+            if (showExitConfirmation) {
+                AlertDialog(
+                    onDismissRequest = { showExitConfirmation = false },
+                    title = { Text("Quitter EJDEN ?") },
+                    text = {
+                        Text("Voulez-vous vraiment quitter l’application ?")
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            showExitConfirmation = false
+                            onExitApp()
+                        }) {
+                            Text("Quitter", color = Error)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { showExitConfirmation = false }
+                        ) {
+                            Text("Rester dans l’application")
+                        }
+                    }
+                )
             }
         }
     }

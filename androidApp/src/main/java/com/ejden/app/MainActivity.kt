@@ -3,6 +3,7 @@ package com.ejden.app
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.rememberCoroutineScope
@@ -27,6 +28,14 @@ class MainActivity : ComponentActivity() {
         )
 
         setContent {
+            var nativeBackAction by androidx.compose.runtime.remember {
+                androidx.compose.runtime.mutableStateOf<(() -> Unit)?>(null)
+            }
+
+            BackHandler(enabled = nativeBackAction != null) {
+                nativeBackAction?.invoke()
+            }
+
             val products by produceState(
                 initialValue = emptyList<ProductUi>(),
                 repository
@@ -46,7 +55,11 @@ class MainActivity : ComponentActivity() {
                 },
                 onDeleteProduct = { id ->
                     scope.launch { repository.deleteProduct(id) }
-                }
+                },
+                registerBackHandler = { action ->
+                    nativeBackAction = action
+                },
+                onExitApp = { finish() }
             )
         }
     }
